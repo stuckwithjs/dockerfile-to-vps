@@ -1,0 +1,39 @@
+name: 'Deploy to VPS'
+description: 'Build a Docker image from a Dockerfile and deploy it to a VPS'
+inputs:
+  dockerfile:
+    description: 'The Dockerfile to build'
+    required: true
+  build_context:
+    description: 'The build context for the Dockerfile'
+    required: false
+    default: '.'
+  host_user:
+    description: 'The username to use when connecting to the VPS'
+    required: true
+  host_ip:
+    description: 'The IP address or hostname of the VPS'
+    required: true
+  ssh_private_key:
+    description: 'The private SSH key to use when connecting to the VPS'
+    required: true
+  ssh_port:
+    description: 'The port number to use when connecting to the VPS'
+    required: false
+    default: '22'
+runs:
+  using: 'docker'
+  image: 'ubuntu:20.04'
+  steps:
+  - name: Setup SSH
+    uses: kielabokkie/ssh-key-and-known-hosts-action@v1.2.0
+    with:
+      ssh-private-key: ${{ inputs.ssh_private_key }}
+      ssh-host: ${{ inputs.host_ip }}
+      ssh-port: ${{ inputs.ssh_port }}
+  - name: Build Docker image
+    run: |
+      docker build -t my-image -f ${{ inputs.dockerfile }} ${{ inputs.build_context }}
+  - name: Copy image to VPS
+    run: |
+      scp -i ~/.ssh/id_rsa my-image ${{ inputs.host_user }}@${{ inputs.host_ip }}:/tmp
